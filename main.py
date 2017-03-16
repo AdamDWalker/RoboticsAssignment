@@ -24,12 +24,36 @@ class Follower:
         self.cmd_vel_pub = rospy.Publisher('/turtlebot/cmd_vel',
                                            Twist, queue_size=1)
         self.twist = Twist()
+        
+        self.velocity = 1
+        self.colourTarget = 0
+        self.colourFound = [0,0,0,0]
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_bound = numpy.array([ 40, 100,  80])
-        upper_bound = numpy.array([ 80, 255, 250])
+        
+        # Yellow
+        if( self.colourTarget == 0 and self.colourFound[0] == 0):
+            lower_bound = numpy.array([ 40, 100,  80])
+            upper_bound = numpy.array([ 80, 255, 250])
+        # Green
+        elif( self.colourTarget == 0 and self.colourFound[0] == 0):
+            lower_bound = numpy.array([ 40, 100,  80])
+            upper_bound = numpy.array([ 80, 255, 250])            
+        # Blue
+        elif( self.colourTarget == 0 and self.colourFound[0] == 0):
+            lower_bound = numpy.array([ 40, 100,  80])
+            upper_bound = numpy.array([ 80, 255, 250])           
+        # Red
+        elif( self.colourTarget == 0 and self.colourFound[0] == 0):
+            lower_bound = numpy.array([ 40, 100,  80])
+            upper_bound = numpy.array([ 80, 255, 250])           
+        # Otherwise just set the mask to black
+        else:
+            lower_bound = numpy.array([ 0, 0,  0])
+            upper_bound = numpy.array([ 0, 0, 0])
+        
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
 
         h, w, d = image.shape
@@ -43,11 +67,12 @@ class Follower:
             
             # BEGIN CONTROL
             err = cx - w/2
-            self.twist.linear.x = 0.2
+            self.twist.linear.x = self.velocity
             self.twist.angular.z = -float(err) / 100
             self.cmd_vel_pub.publish(self.twist)
             # END CONTROL
-            
+        else:
+            self.colourTarget = (self.colourTarget + 1) % 4
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
         cv2.waitKey(1)
