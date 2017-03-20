@@ -4,9 +4,8 @@
     File Name: Main.py
     Author: Adam Walker
     Date Created: 14/03/2017
-    Date Last Modified: 16/03/2017
+    Date Last Modified: 20/03/2017
     Python Version: 2.7
-
 '''
 
 import rospy, cv2, cv_bridge, numpy
@@ -33,6 +32,12 @@ class Follower:
         self.velocity = 0.5
         self.colourTarget = 0
         self.colourFound = [0,0,0,0]
+        self.currentDist = 100
+
+    def moveBot(self, linear, angular):
+        self.twist.linear.x = linear
+        self.twist.angular.z = angular
+        self.cmd_vel_pub.publish(self.twist)
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -92,12 +97,11 @@ class Follower:
                     self.colourTarget = (self.colourTarget+1)%4
                     print("Red Found")
 
-            # BEGIN CONTROL
+            # Begin Control
             err = cx - w/2
-            self.twist.linear.x = self.velocity
-            self.twist.angular.z = -float(err) / 100
-            self.cmd_vel_pub.publish(self.twist)
-            # END CONTROL
+            self.moveBot(self.velocity, -float(err) / 100)
+            # End Control
+
         else:
             self.colourTarget = (self.colourTarget+1)%4
         cv2.imshow("window", image)
@@ -106,7 +110,6 @@ class Follower:
 
     def laser_callback(self, msg):
         self.currentDist = msg.ranges[len(msg.ranges) / 2]
-
 
 rospy.init_node('follower')
 follower = Follower()
