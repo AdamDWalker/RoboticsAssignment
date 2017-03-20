@@ -12,6 +12,7 @@
 import rospy, cv2, cv_bridge, numpy
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
 
 class Follower:
 
@@ -21,6 +22,10 @@ class Follower:
         cv2.namedWindow("mask", 1)
         self.image_sub = rospy.Subscriber('/turtlebot/camera/rgb/image_raw',
                                           Image, self.image_callback)
+
+        self.laser_sub = rospy.Subscriber('/turtlebot/scan',
+                                          LaserScan, self.laser_callback)
+
         self.cmd_vel_pub = rospy.Publisher('/turtlebot/cmd_vel',
                                            Twist, queue_size=1)
         self.twist = Twist()
@@ -43,7 +48,7 @@ class Follower:
             upper_bound = numpy.array([ 80, 255, 250])
         # Blue
         elif( self.colourTarget == 2 and self.colourFound[2] == 0):
-            lower_bound = numpy.array([ 100, 50,  50])
+            lower_bound = numpy.array([ 100, 100,  100])
             upper_bound = numpy.array([ 130, 255, 255])
         # Red
         elif( self.colourTarget == 3 and self.colourFound[3] == 0):
@@ -65,25 +70,27 @@ class Follower:
             cy = int(M['m01']/M['m00'])
             cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
 
-            if(self.colourTarget == 0):
-                self.colourFound[0] = 1
-                self.colourTarget = (self.colourTarget+1)%4
-                print("Yellow Found")
+            if(self.currentDist < 1):
 
-            elif(self.colourTarget == 1):
-                self.colourFound[1] = 1
-                self.colourTarget = (self.colourTarget+1)%4
-                print("Green Found")
+                if(self.colourTarget == 0):
+                    self.colourFound[0] = 1
+                    self.colourTarget = (self.colourTarget+1)%4
+                    print("Yellow Found")
 
-            elif(self.colourTarget == 2):
-                self.colourFound[2] = 1
-                self.colourTarget = (self.colourTarget+1)%4
-                print("Blue Found")
+                elif(self.colourTarget == 1):
+                    self.colourFound[1] = 1
+                    self.colourTarget = (self.colourTarget+1)%4
+                    print("Green Found")
 
-            elif(self.colourTarget == 3):
-                self.colourFound[3] = 1
-                self.colourTarget = (self.colourTarget+1)%4
-                print("Red Found")
+                elif(self.colourTarget == 2):
+                    self.colourFound[2] = 1
+                    self.colourTarget = (self.colourTarget+1)%4
+                    print("Blue Found")
+
+                elif(self.colourTarget == 3):
+                    self.colourFound[3] = 1
+                    self.colourTarget = (self.colourTarget+1)%4
+                    print("Red Found")
 
             # BEGIN CONTROL
             err = cx - w/2
@@ -96,6 +103,10 @@ class Follower:
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
         cv2.waitKey(1)
+
+    def laser_callback(self, msg):
+        self.currentDist = msg.ranges[len(msg.ranges) / 2]
+
 
 rospy.init_node('follower')
 follower = Follower()
