@@ -79,22 +79,22 @@ class Follower:
 
                 if(self.colourTarget == 0):
                     self.colourFound[0] = 1
-                    self.colourTarget = (self.colourTarget+1)%4
+                    self.colourTarget = (self.colourTarget + 1) % 4
                     print("Yellow Found")
 
                 elif(self.colourTarget == 1):
                     self.colourFound[1] = 1
-                    self.colourTarget = (self.colourTarget+1)%4
+                    self.colourTarget = (self.colourTarget + 1) % 4
                     print("Green Found")
 
                 elif(self.colourTarget == 2):
                     self.colourFound[2] = 1
-                    self.colourTarget = (self.colourTarget+1)%4
+                    self.colourTarget = (self.colourTarget + 1) % 4
                     print("Blue Found")
 
                 elif(self.colourTarget == 3):
                     self.colourFound[3] = 1
-                    self.colourTarget = (self.colourTarget+1)%4
+                    self.colourTarget = (self.colourTarget + 1) % 4
                     print("Red Found")
 
             # Begin Control
@@ -103,7 +103,9 @@ class Follower:
             # End Control
 
         else:
-            self.colourTarget = (self.colourTarget+1)%4
+            self.colourTarget = (self.colourTarget + 1) % 4
+            self.moveBot(0, 1)
+
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
         cv2.waitKey(1)
