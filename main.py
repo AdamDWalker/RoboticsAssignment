@@ -29,7 +29,7 @@ class Follower:
                                            Twist, queue_size=1)
         self.twist = Twist()
 
-        self.velocity = 0.5
+        self.velocity = 1
         self.colourTarget = 0
         self.colourFound = [0,0,0,0]
         self.currentDist = 100
@@ -97,14 +97,12 @@ class Follower:
                     self.colourTarget = (self.colourTarget + 1) % 4
                     print("Red Found")
 
-            # Begin Control
             err = cx - w/2
             self.moveBot(self.velocity, -float(err) / 100)
-            # End Control
 
         else:
             self.colourTarget = (self.colourTarget + 1) % 4
-            self.moveBot(0, 1)
+            self.moveBot(0, 2)
 
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
