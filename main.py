@@ -4,7 +4,7 @@
     File Name: Main.py
     Author: Adam Walker
     Date Created: 14/03/2017
-    Date Last Modified: 20/03/2017
+    Date Last Modified: 21/03/2017
     Python Version: 2.7
 '''
 
@@ -12,6 +12,8 @@ import rospy, cv2, cv_bridge, numpy
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
+from math import radians
+from numpy import nanmean, nanmin, nansum
 
 class Follower:
 
@@ -27,17 +29,33 @@ class Follower:
 
         self.cmd_vel_pub = rospy.Publisher('/turtlebot/cmd_vel',
                                            Twist, queue_size=1)
+
         self.twist = Twist()
 
         self.velocity = 1
         self.colourTarget = 0
         self.colourFound = [0,0,0,0]
         self.currentDist = 100
+        self.laserArray = []
 
     def moveBot(self, linear, angular):
         self.twist.linear.x = linear
         self.twist.angular.z = angular
         self.cmd_vel_pub.publish(self.twist)
+
+    def avoidance(self):
+        leftQuart = len(self.laserArray) / 4
+        rightQuart = leftQuart * 3
+
+        if nanmean(self.laserArray) < 1:
+            self.moveBot(0, 1)
+        else:
+            if nansum(self.laserArray[:leftQuart]) < nansum(self.laserArray[rightQuart:]):
+                self.moveBot(0, 1)
+            elif nansum(self.laserArray[:leftQuart]) >= nansum(self.laserArray[rightQuart:]):
+                self.moveBot(0, -1)
+            else:
+                self.moveBot(1.2, 0)
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -70,39 +88,46 @@ class Follower:
 
         M = cv2.moments(mask)
 
-        if M['m00'] > 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+        if nanmin(self.laserArray > 1):
 
-            if(self.currentDist < 1):
+            if M['m00'] > 0:
+                cx = int(M['m10']/M['m00'])
+                cy = int(M['m01']/M['m00'])
+                cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
 
-                if(self.colourTarget == 0):
-                    self.colourFound[0] = 1
-                    self.colourTarget = (self.colourTarget + 1) % 4
-                    print("Yellow Found")
+                if(self.currentDist < 1):
 
-                elif(self.colourTarget == 1):
-                    self.colourFound[1] = 1
-                    self.colourTarget = (self.colourTarget + 1) % 4
-                    print("Green Found")
+                    if(self.colourTarget == 0):
+                        self.colourFound[0] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("Yellow Found")
 
-                elif(self.colourTarget == 2):
-                    self.colourFound[2] = 1
-                    self.colourTarget = (self.colourTarget + 1) % 4
-                    print("Blue Found")
+                    elif(self.colourTarget == 1):
+                        self.colourFound[1] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("Green Found")
 
-                elif(self.colourTarget == 3):
-                    self.colourFound[3] = 1
-                    self.colourTarget = (self.colourTarget + 1) % 4
-                    print("Red Found")
+                    elif(self.colourTarget == 2):
+                        self.colourFound[2] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("Blue Found")
 
-            err = cx - w/2
-            self.moveBot(self.velocity, -float(err) / 100)
+                    elif(self.colourTarget == 3):
+                        self.colourFound[3] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("Red Found")
 
+                err = cx - w/2
+                self.moveBot(self.velocity, -float(err) / 100)
+
+            else:
+                self.colourTarget = (self.colourTarget + 1) % 4
+                if nanmin(self.laserArray) < 1:
+                    self.avoidance()
+                else:
+                    self.moveBot(1.2, 0)
         else:
-            self.colourTarget = (self.colourTarget + 1) % 4
-            self.moveBot(0, 2)
+            self.avoidance()
 
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
@@ -110,6 +135,7 @@ class Follower:
 
     def laser_callback(self, msg):
         self.currentDist = msg.ranges[len(msg.ranges) / 2]
+        self.laserArray = msg.ranges
 
 rospy.init_node('follower')
 follower = Follower()
