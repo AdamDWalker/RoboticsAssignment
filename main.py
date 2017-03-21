@@ -8,7 +8,7 @@
     Python Version: 2.7
 '''
 
-import rospy, cv2, cv_bridge, numpy
+import rospy, cv2, cv_bridge, numpy, math
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
@@ -36,7 +36,7 @@ class Follower:
         self.colourTarget = 0
         self.colourFound = [0,0,0,0]
         self.currentDist = 100
-        self.laserArray = []
+        self.laserArray = [0]
 
     def moveBot(self, linear, angular):
         self.twist.linear.x = linear
@@ -47,15 +47,21 @@ class Follower:
         leftQuart = len(self.laserArray) / 4
         rightQuart = leftQuart * 3
 
-        if nanmean(self.laserArray) < 1:
+        if math.isnan(nanmean(self.laserArray)):
+            self.moveBot(-0.5, 0)
+            print("1")
+        elif nanmean(self.laserArray) < 1:
             self.moveBot(0, 1)
+            print("2")
         else:
             if nansum(self.laserArray[:leftQuart]) < nansum(self.laserArray[rightQuart:]):
                 self.moveBot(0, 1)
             elif nansum(self.laserArray[:leftQuart]) >= nansum(self.laserArray[rightQuart:]):
                 self.moveBot(0, -1)
+                print("4")
             else:
                 self.moveBot(1.2, 0)
+                print("5")
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -88,7 +94,7 @@ class Follower:
 
         M = cv2.moments(mask)
 
-        if nanmin(self.laserArray > 1):
+        if nanmean(self.laserArray > 1) and math.isnan(nanmean(self.laserArray) == False):
 
             if M['m00'] > 0:
                 cx = int(M['m10']/M['m00'])
@@ -122,7 +128,7 @@ class Follower:
 
             else:
                 self.colourTarget = (self.colourTarget + 1) % 4
-                if nanmin(self.laserArray) < 1:
+                if nanmean(self.laserArray) < 1:
                     self.avoidance()
                 else:
                     self.moveBot(1.2, 0)
