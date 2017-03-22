@@ -32,7 +32,7 @@ class Follower:
 
         self.twist = Twist()
 
-        self.velocity = 1
+        self.velocity = 1.2
         self.colourTarget = 0
         self.colourFound = [0,0,0,0]
         self.currentDist = 100
@@ -47,18 +47,19 @@ class Follower:
 
     def avoidance(self):
 
-        if nanmean(self.laserArray) < 1.5:
-            self.moveBot(0, 1)
-            print("Front blocked - Turning")
-        elif nanmean(self.laserArray[:self.leftQuart]) < 1: #nansum(self.laserArray[rightQuart:]):
-            self.moveBot(0, 0.5)
-            print("Left Blocked - Going Right")
-        elif nanmean(self.laserArray[self.rightQuart:]) < 1: #>= nansum(self.laserArray[rightQuart:]):
-            self.moveBot(0, -0.5)
-            print("Right Blocked - Going Left")
+        if (math.isnan(nanmean(self.laserArray)) == False):
+            if nanmean(self.laserArray) < 1.5:
+                self.moveBot(0, 0.75)
+                print("Front blocked - Turning")
+            else:
+                if (self.laserArray[1]) < (self.laserArray[(len(self.laserArray) - 1)]):
+                    self.moveBot(0, 0.5)
+                    print("Right Blocked - Going Left")
+                elif (self.laserArray[(len(self.laserArray) - 1)]) < (self.laserArray[1]):
+                    self.moveBot(0, -0.5)
+                    print("Left Blocked - Going Right")
         else:
-            self.moveBot(1.2, 0)
-            print("Going Forward")
+            self.moveBot(-1, 0)
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -91,50 +92,52 @@ class Follower:
 
         M = cv2.moments(mask)
 
-        if nanmin(self.laserArray > 1):
+        if nanmin(self.laserArray > 0.75):
+            print("Path 1")
+            if M['m00'] > 0:
+                cx = int(M['m10']/M['m00'])
+                cy = int(M['m01']/M['m00'])
+                cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
 
-            if nanmin(self.laserArray > 0.75):
+                err = cx - w/2
+                self.moveBot(self.velocity, -float(err) / 100)
 
-                if M['m00'] > 0:
-                    cx = int(M['m10']/M['m00'])
-                    cy = int(M['m01']/M['m00'])
-                    cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+                if(self.currentDist < 1.25) and (self.currentDist >= 0.75):
+                    print("Path 2")
+                    if(self.colourTarget == 0):
+                        self.colourFound[0] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("============== Yellow Found ==============")
 
-                    if(self.currentDist < 1):
+                    elif(self.colourTarget == 1):
+                        self.colourFound[1] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("============== Green Found ==============")
 
-                        if(self.colourTarget == 0):
-                            self.colourFound[0] = 1
-                            self.colourTarget = (self.colourTarget + 1) % 4
-                            print("Yellow Found")
+                    elif(self.colourTarget == 2):
+                        self.colourFound[2] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("============== Blue Found ==============")
 
-                        elif(self.colourTarget == 1):
-                            self.colourFound[1] = 1
-                            self.colourTarget = (self.colourTarget + 1) % 4
-                            print("Green Found")
+                    elif(self.colourTarget == 3):
+                        self.colourFound[3] = 1
+                        self.colourTarget = (self.colourTarget + 1) % 4
+                        print("============== Red Found ==============")
 
-                        elif(self.colourTarget == 2):
-                            self.colourFound[2] = 1
-                            self.colourTarget = (self.colourTarget + 1) % 4
-                            print("Blue Found")
-
-                        elif(self.colourTarget == 3):
-                            self.colourFound[3] = 1
-                            self.colourTarget = (self.colourTarget + 1) % 4
-                            print("Red Found")
-
-                    err = cx - w/2
-                    self.moveBot(self.velocity, -float(err) / 100)
-
-                else:
-                    self.colourTarget = (self.colourTarget + 1) % 4
-                    if nanmin(self.laserArray) < 1:
-                        self.avoidance()
-                    else:
-                        self.moveBot(1.2, 0)
             else:
-                self.avoidance()
+                self.colourTarget = (self.colourTarget + 1) % 4
+                if nanmin(self.laserArray) < 1 and (math.isnan(self.currentDist) == False):
+                    self.avoidance()
+                    print("Path 3")
+                else:
+                    self.moveBot(self.velocity, 0)
+                    print("Path 4")
         else:
             self.moveBot(0, -1)
+            self.avoidance()
+            print("Path 5")
+
+
 
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
