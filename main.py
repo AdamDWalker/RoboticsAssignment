@@ -49,19 +49,20 @@ class Follower:
 
         if math.isnan(nanmean(self.laserArray)):
             self.moveBot(-0.5, 0)
-            print("1")
-        elif nanmean(self.laserArray) < 1:
+            print("Front blocked - Reversing")
+        elif nanmean(self.laserArray) < 3:
             self.moveBot(0, 1)
-            print("2")
+            print("Front blocked - Turning")
         else:
             if nansum(self.laserArray[:leftQuart]) < nansum(self.laserArray[rightQuart:]):
-                self.moveBot(0, 1)
+                self.moveBot(0, 0.5)
+                print("Left Blocked - Going Right")
             elif nansum(self.laserArray[:leftQuart]) >= nansum(self.laserArray[rightQuart:]):
-                self.moveBot(0, -1)
-                print("4")
+                self.moveBot(0, -0.5)
+                print("Right Blocked - Going Left")
             else:
                 self.moveBot(1.2, 0)
-                print("5")
+                print("Going Forward")
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
