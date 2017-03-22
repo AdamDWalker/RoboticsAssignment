@@ -4,7 +4,7 @@
     File Name: Main.py
     Author: Adam Walker
     Date Created: 14/03/2017
-    Date Last Modified: 21/03/2017
+    Date Last Modified: 22/03/2017
     Python Version: 2.7
 '''
 
@@ -37,6 +37,8 @@ class Follower:
         self.colourFound = [0,0,0,0]
         self.currentDist = 100
         self.laserArray = [0]
+        self.leftQuart = len(self.laserArray) / 4
+        self.rightQuart = self.leftQuart * 3
 
     def moveBot(self, linear, angular):
         self.twist.linear.x = linear
@@ -44,25 +46,19 @@ class Follower:
         self.cmd_vel_pub.publish(self.twist)
 
     def avoidance(self):
-        leftQuart = len(self.laserArray) / 4
-        rightQuart = leftQuart * 3
 
-        if math.isnan(nanmean(self.laserArray)):
-            self.moveBot(-0.5, 0)
-            print("Front blocked - Reversing")
-        elif nanmean(self.laserArray) < 3:
+        if nanmean(self.laserArray) < 1.5:
             self.moveBot(0, 1)
             print("Front blocked - Turning")
+        elif nanmean(self.laserArray[:self.leftQuart]) < 1: #nansum(self.laserArray[rightQuart:]):
+            self.moveBot(0, 0.5)
+            print("Left Blocked - Going Right")
+        elif nanmean(self.laserArray[self.rightQuart:]) < 1: #>= nansum(self.laserArray[rightQuart:]):
+            self.moveBot(0, -0.5)
+            print("Right Blocked - Going Left")
         else:
-            if nansum(self.laserArray[:leftQuart]) < nansum(self.laserArray[rightQuart:]):
-                self.moveBot(0, 0.5)
-                print("Left Blocked - Going Right")
-            elif nansum(self.laserArray[:leftQuart]) >= nansum(self.laserArray[rightQuart:]):
-                self.moveBot(0, -0.5)
-                print("Right Blocked - Going Left")
-            else:
-                self.moveBot(1.2, 0)
-                print("Going Forward")
+            self.moveBot(1.2, 0)
+            print("Going Forward")
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -95,46 +91,50 @@ class Follower:
 
         M = cv2.moments(mask)
 
-        if nanmean(self.laserArray > 1) and math.isnan(nanmean(self.laserArray) == False):
+        if nanmin(self.laserArray > 1):
 
-            if M['m00'] > 0:
-                cx = int(M['m10']/M['m00'])
-                cy = int(M['m01']/M['m00'])
-                cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
+            if nanmin(self.laserArray > 0.75):
 
-                if(self.currentDist < 1):
+                if M['m00'] > 0:
+                    cx = int(M['m10']/M['m00'])
+                    cy = int(M['m01']/M['m00'])
+                    cv2.circle(image, (cx, cy), 20, (0,0,255), -1)
 
-                    if(self.colourTarget == 0):
-                        self.colourFound[0] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("Yellow Found")
+                    if(self.currentDist < 1):
 
-                    elif(self.colourTarget == 1):
-                        self.colourFound[1] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("Green Found")
+                        if(self.colourTarget == 0):
+                            self.colourFound[0] = 1
+                            self.colourTarget = (self.colourTarget + 1) % 4
+                            print("Yellow Found")
 
-                    elif(self.colourTarget == 2):
-                        self.colourFound[2] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("Blue Found")
+                        elif(self.colourTarget == 1):
+                            self.colourFound[1] = 1
+                            self.colourTarget = (self.colourTarget + 1) % 4
+                            print("Green Found")
 
-                    elif(self.colourTarget == 3):
-                        self.colourFound[3] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("Red Found")
+                        elif(self.colourTarget == 2):
+                            self.colourFound[2] = 1
+                            self.colourTarget = (self.colourTarget + 1) % 4
+                            print("Blue Found")
 
-                err = cx - w/2
-                self.moveBot(self.velocity, -float(err) / 100)
+                        elif(self.colourTarget == 3):
+                            self.colourFound[3] = 1
+                            self.colourTarget = (self.colourTarget + 1) % 4
+                            print("Red Found")
 
-            else:
-                self.colourTarget = (self.colourTarget + 1) % 4
-                if nanmean(self.laserArray) < 1:
-                    self.avoidance()
+                    err = cx - w/2
+                    self.moveBot(self.velocity, -float(err) / 100)
+
                 else:
-                    self.moveBot(1.2, 0)
+                    self.colourTarget = (self.colourTarget + 1) % 4
+                    if nanmin(self.laserArray) < 1:
+                        self.avoidance()
+                    else:
+                        self.moveBot(1.2, 0)
+            else:
+                self.avoidance()
         else:
-            self.avoidance()
+            self.moveBot(0, -1)
 
         cv2.imshow("window", image)
         cv2.imshow("mask", mask)
