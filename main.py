@@ -45,21 +45,42 @@ class Follower:
         self.twist.angular.z = angular
         self.cmd_vel_pub.publish(self.twist)
 
+    def colour_check(self):
+        if(self.colourTarget == 0):
+            self.colourFound[0] = 1
+            self.colourTarget = (self.colourTarget + 1) % 4
+            print("============== Yellow Found ==============")
+
+        elif(self.colourTarget == 1):
+            self.colourFound[1] = 1
+            self.colourTarget = (self.colourTarget + 1) % 4
+            print("============== Green Found ==============")
+
+        elif(self.colourTarget == 2):
+            self.colourFound[2] = 1
+            self.colourTarget = (self.colourTarget + 1) % 4
+            print("============== Blue Found ==============")
+
+        elif(self.colourTarget == 3):
+            self.colourFound[3] = 1
+            self.colourTarget = (self.colourTarget + 1) % 4
+            print("============== Red Found ==============")
+
     def avoidance(self):
 
         if (math.isnan(nanmean(self.laserArray)) == False):
-            if nanmean(self.laserArray) < 1.5:
-                self.moveBot(0, 0.75)
-                print("Front blocked - Turning")
-            else:
-                if (self.laserArray[1]) < (self.laserArray[(len(self.laserArray) - 1)]):
-                    self.moveBot(0, 0.5)
-                    print("Right Blocked - Going Left")
-                elif (self.laserArray[(len(self.laserArray) - 1)]) < (self.laserArray[1]):
-                    self.moveBot(0, -0.5)
-                    print("Left Blocked - Going Right")
+            if nanmean(self.laserArray) < 1.5 or nanmin(self.laserArray) < 1:
+                self.moveBot(0, -1)
+                print("Front blocked - Turning Left")
+
+            elif nansum(self.laserArray[:self.leftQuart]) < nansum(self.laserArray[self.rightQuart:]):
+                self.moveBot(0.3, 1)
+                print("Right Blocked - Going Left")
+            elif nansum(self.laserArray[:self.leftQuart]) > nansum(self.laserArray[self.rightQuart:]):
+                self.moveBot(0.3, -1)
+                print("Left Blocked - Going Right")
         else:
-            self.moveBot(-1, 0)
+            self.moveBot(-1, 0.5)
 
     def image_callback(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg,desired_encoding='bgr8')
@@ -103,26 +124,7 @@ class Follower:
                 self.moveBot(self.velocity, -float(err) / 100)
 
                 if(self.currentDist < 1.25) and (self.currentDist >= 0.75):
-                    print("Path 2")
-                    if(self.colourTarget == 0):
-                        self.colourFound[0] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("============== Yellow Found ==============")
-
-                    elif(self.colourTarget == 1):
-                        self.colourFound[1] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("============== Green Found ==============")
-
-                    elif(self.colourTarget == 2):
-                        self.colourFound[2] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("============== Blue Found ==============")
-
-                    elif(self.colourTarget == 3):
-                        self.colourFound[3] = 1
-                        self.colourTarget = (self.colourTarget + 1) % 4
-                        print("============== Red Found ==============")
+                    self.colour_check()
 
             else:
                 self.colourTarget = (self.colourTarget + 1) % 4
@@ -133,8 +135,7 @@ class Follower:
                     self.moveBot(self.velocity, 0)
                     print("Path 4")
         else:
-            self.moveBot(0, -1)
-            self.avoidance()
+            self.moveBot(-1, 0)
             print("Path 5")
 
 
