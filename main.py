@@ -71,7 +71,7 @@ class Follower:
         if (math.isnan(nanmean(self.laserArray)) == False):
             if nanmean(self.laserArray) < 1.5 or nanmin(self.laserArray) < 1:
                 self.moveBot(0, -1)
-                print("Front blocked - Turning Left")
+                print("Front blocked - Turning Right")
 
             elif nansum(self.laserArray[:self.leftQuart]) < nansum(self.laserArray[self.rightQuart:]):
                 self.moveBot(0.3, 1)
