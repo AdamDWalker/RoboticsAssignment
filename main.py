@@ -114,7 +114,6 @@ class Follower:
         M = cv2.moments(mask)
 
         if nanmin(self.laserArray > 0.75):
-            print("Path 1")
             if M['m00'] > 0:
                 cx = int(M['m10']/M['m00'])
                 cy = int(M['m01']/M['m00'])
@@ -130,13 +129,10 @@ class Follower:
                 self.colourTarget = (self.colourTarget + 1) % 4
                 if nanmin(self.laserArray) < 1 and (math.isnan(self.currentDist) == False):
                     self.avoidance()
-                    print("Path 3")
                 else:
                     self.moveBot(self.velocity, 0)
-                    print("Path 4")
         else:
             self.moveBot(-1, 0)
-            print("Path 5")
 
 
 
